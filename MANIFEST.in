@@ -1,0 +1,8 @@
+include README.rst
+include LICENSE
+recursive-include eval_engine/templates *
+recursive-include eval_engine/static *
+recursive-include eval_engine/fixtures *
+recursive-include eval_engine/migrations *.py
+prune eval_engine/migrations/__pycache__
+exclude eval_engine/migrations/0*.py

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Test Rules - django-eval Demo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Interactive Rule Testing</h2>
+    <p style="font-size:13px;color:#666;">Select a rule and provide a JSON context to test how it evaluates.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Select Rule</label>
+            <select name="rule_id" required>
+                <option value="">-- Choose a rule --</option>
+                {% for rule in rules %}
+                <option value="{{ rule.rule_id }}" {% if selected_rule == rule.rule_id %}selected{% endif %}>
+                    {{ rule.rule_name }} ({{ rule.rule_id }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Test Context (JSON)</label>
+            <textarea name="context" rows="10" required>{{ context_json|default:'{
+  "severity": "critical",
+  "level": "critical",
+  "alert_count_1h": 15,
+  "alert_count_1d": 100,
+  "predicted_weight": 0.85,
+  "associate_count": 3,
+  "business_id": "P0",
+  "source_name": "monitoring"
+}' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Run Test</button>
+    </form>
+</div>
+
+{% if error %}
+<div class="card">
+    <div class="result-box error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+</div>
+{% endif %}
+
+{% if result %}
+<div class="card">
+    <h2>Test Result</h2>
+    {% if result.success %}
+    <div class="result-box success">
+        <p><strong>Matched:</strong> {{ result.matched|yesno:"Yes,No" }}</p>
+        <p><strong>Action:</strong></p>
+        <pre>{{ result.action|json_script:"action-data" }}</pre>
+        <script>
+        (function() {
+            var el = document.getElementById('action-data');
+            if (el) {
+                var data = JSON.parse(el.textContent);
+                el.outerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            }
+        })();
+        </script>
+        <p style="font-size:11px;color:#666;margin-top:8px;">
+            Latency: {{ result.latency_ms|floatformat:3 }}ms | Trace ID: {{ result.trace_id }}
+        </p>
+    </div>
+    {% else %}
+    <div class="result-box error">
+        <strong>Test Failed:</strong> {{ result.error }}
+        <p style="font-size:11px;color:#666;">Type: {{ result.error_type }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

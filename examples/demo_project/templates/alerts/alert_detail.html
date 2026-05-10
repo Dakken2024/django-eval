@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}{{ alert.title }} - django-eval Demo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Alert: {{ alert.title }}</h2>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <span class="badge badge-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+        {% if alert.pushed %}
+            <span class="badge badge-success">PUSHED via {{ alert.push_channel }}</span>
+        {% else %}
+            <span class="badge badge-muted">Not Evaluated</span>
+        {% endif %}
+    </div>
+
+    <table>
+        <tr><th style="width:180px;">Alert ID</th><td>{{ alert.alert_id }}</td></tr>
+        <tr><th>Source</th><td>{{ alert.source|default:"-" }}</td></tr>
+        <tr><th>Business ID</th><td>{{ alert.business_id|default:"-" }}</td></tr>
+        <tr><th>Alert Count (1h)</th><td>{{ alert.alert_count_1h }}</td></tr>
+        <tr><th>Alert Count (1d)</th><td>{{ alert.alert_count_1d }}</td></tr>
+        <tr><th>Predicted Weight</th><td>{{ alert.predicted_weight }}</td></tr>
+        <tr><th>Associate Count</th><td>{{ alert.associate_count }}</td></tr>
+        <tr><th>Content</th><td>{{ alert.content|default:"-"|linebreaksbr }}</td></tr>
+        <tr><th>Created</th><td>{{ alert.created_at|date:"Y-m-d H:i:s" }}</td></tr>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Rule Engine Context</h2>
+    <p style="font-size:13px;color:#666;">This is the JSON context that gets passed to the rule engine when evaluating this alert:</p>
+    <pre>{{ rule_context|json_script:"context-data" }}</pre>
+    <script>
+    (function() {
+        var el = document.getElementById('context-data');
+        if (el) {
+            try {
+                var data = JSON.parse(el.textContent);
+                el.outerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch(e) {}
+        }
+    })();
+    </script>
+</div>
+
+{% if evaluation_result %}
+<div class="card">
+    <h2>Evaluation Result</h2>
+    <table>
+        <tr><th style="width:180px;">Should Push</th><td>{{ evaluation_result.should_push|yesno:"Yes,No" }}</td></tr>
+        <tr><th>Channel</th><td>{{ evaluation_result.channel }}</td></tr>
+        <tr><th>Reason</th><td>{{ evaluation_result.reason }}</td></tr>
+    </table>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Actions</h2>
+    <form method="post" action="{% url 'alert_evaluate' alert.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">Evaluate with Rule Engine</button>
+    </form>
+    <a href="{% url 'alert_list' %}" class="btn">Back to List</a>
+</div>
+{% endblock %}

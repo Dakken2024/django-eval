@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .rule-content-json {
+        font-family: monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        background: #f8f8f8;
+        padding: 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .field-rule_content textarea {
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - django-eval Demo{% endblock %}
+
+{% block content %}
+<div class="stats">
+    <div class="stat-card">
+        <div class="number">{{ total_alerts }}</div>
+        <div class="label">Total Alerts</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ pushed_alerts }}</div>
+        <div class="label">Pushed Alerts</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ total_rules }}</div>
+        <div class="label">Active Rules</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Welcome to django-eval Demo</h2>
+    <p>This demo project shows how to integrate <strong>django-eval</strong> into a Django application.</p>
+
+    <h3 style="font-size:14px;color:#666;margin-top:20px;">Quick Start</h3>
+    <ol style="font-size:13px;line-height:2;">
+        <li>Create an alert via <a href="{% url 'alert_create' %}">New Alert</a></li>
+        <li>View the alert and click <strong>Evaluate</strong> to run it through the rule engine</li>
+        <li>Check the <a href="{% url 'rule_list' %}">Rules</a> page to see active rules</li>
+        <li>Use <a href="{% url 'rule_test' %}">Test Rules</a> to experiment with different contexts</li>
+        <li>Manage rules in the <a href="/admin/eval_engine/ruleconfig/" target="_blank">Django Admin</a></li>
+    </ol>
+
+    <h3 style="font-size:14px;color:#666;margin-top:20px;">Key Features Demonstrated</h3>
+    <ul style="font-size:13px;line-height:2;">
+        <li><strong>Decision Table Rules</strong> - First-hit policy with when/then conditions</li>
+        <li><strong>Expression Evaluation</strong> - Safe Python expressions via SimpleEval</li>
+        <li><strong>Rule Testing</strong> - Test rules with custom JSON contexts</li>
+        <li><strong>Audit Logging</strong> - Custom callback for evaluation tracking</li>
+        <li><strong>Django Admin</strong> - Full CRUD with inline testing panel</li>
+    </ul>
+</div>
+
+<div class="card">
+    <h2>API Endpoints</h2>
+    <p style="font-size:13px;color:#666;">django-eval provides a complete REST API. Try these endpoints:</p>
+    <table>
+        <tr>
+            <th>Endpoint</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td><code>GET /api/eval-engine/health</code></td>
+            <td>Engine health check</td>
+        </tr>
+        <tr>
+            <td><code>POST /api/eval-engine/evaluate</code></td>
+            <td>Evaluate a rule against context</td>
+        </tr>
+        <tr>
+            <td><code>GET /api/eval-engine/rules</code></td>
+            <td>List all rules</td>
+        </tr>
+        <tr>
+            <td><code>POST /api/eval-engine/rules/validate</code></td>
+            <td>Validate expression syntax</td>
+        </tr>
+        <tr>
+            <td><code>GET /api/eval-engine/rule-config/field-schema</code></td>
+            <td>Available field schema</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

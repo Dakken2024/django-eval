@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Rules - django-eval Demo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Active Rules</h2>
+    <p style="font-size:13px;color:#666;">These rules are loaded from django-eval. Manage them in <a href="/admin/eval_engine/ruleconfig/" target="_blank">Django Admin</a>.</p>
+</div>
+
+<div class="card">
+    {% if rules %}
+    <table>
+        <thead>
+            <tr>
+                <th>Rule ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Scope</th>
+                <th>Priority</th>
+                <th>Version</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+            <tr>
+                <td><code>{{ rule.rule_id }}</code></td>
+                <td>{{ rule.rule_name }}</td>
+                <td><span class="badge badge-info">{{ rule.rule_type }}</span></td>
+                <td>{{ rule.scope }}</td>
+                <td>{{ rule.priority }}</td>
+                <td>v{{ rule.version }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center;color:#888;padding:30px;">No active rules. <a href="/admin/eval_engine/ruleconfig/add/" target="_blank">Create one in Admin</a>.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Rule Templates</h2>
+    <p style="font-size:13px;color:#666;">Use these templates as starting points when creating new rules:</p>
+    <ul style="font-size:13px;line-height:2;">
+        <li><strong>Business App - Core App Urgent Push</strong> - Push critical alerts for core apps to urgent channel</li>
+        <li><strong>Business App - Noise Suppression</strong> - Suppress remind-level alerts for non-core apps</li>
+        <li><strong>Infrastructure - Storm Suppression</strong> - Suppress when associated alert count exceeds threshold</li>
+    </ul>
+    <a href="/api/eval-engine/rule-config/templates" target="_blank" class="btn">View Templates (JSON)</a>
+</div>
+{% endblock %}

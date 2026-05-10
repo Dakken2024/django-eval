@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Create Alert - django-eval Demo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Create New Alert</h2>
+    <p style="font-size:13px;color:#666;">Fill in the alert details. After creation, you can evaluate it against the rule engine.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-group">
+                <label>Alert ID</label>
+                <input type="text" name="alert_id" required placeholder="e.g., ALERT-001">
+            </div>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" name="title" required placeholder="e.g., High CPU Usage">
+            </div>
+            <div class="form-group">
+                <label>Severity</label>
+                <select name="severity">
+                    <option value="critical">Critical</option>
+                    <option value="warning">Warning</option>
+                    <option value="info">Info</option>
+                    <option value="remind">Remind</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Source</label>
+                <input type="text" name="source" placeholder="e.g., monitoring-system">
+            </div>
+            <div class="form-group">
+                <label>Business ID</label>
+                <input type="text" name="business_id" placeholder="e.g., P0, P1">
+            </div>
+            <div class="form-group">
+                <label>Alert Count (1h)</label>
+                <input type="number" name="alert_count_1h" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Alert Count (1d)</label>
+                <input type="number" name="alert_count_1d" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Predicted Weight</label>
+                <input type="number" name="predicted_weight" value="0.0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Associate Count</label>
+                <input type="number" name="associate_count" value="0" min="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Content</label>
+            <textarea name="content" rows="3" placeholder="Alert description..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Create Alert</button>
+        <a href="{% url 'alert_list' %}" class="btn" style="background:#888;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

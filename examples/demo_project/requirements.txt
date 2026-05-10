@@ -1,0 +1,10 @@
+# Demo project requirements
+# Python 3.10+ required
+
+# Install django-eval from parent directory
+-e ../..
+
+# Django and dependencies
+django>=3.2,<5.0
+djangorestframework>=3.11
+simpleeval>=0.9.13

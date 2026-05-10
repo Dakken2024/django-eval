@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "Default rule configurations for Eval Engine",
+    "last_updated": "2026-05-10"
+  },
+  "rules": [
+    {
+      "rule_id": "default_push_decision",
+      "rule_name": "Default Push Decision Rule",
+      "rule_type": "push_decision",
+      "engine_type": "simpleeval",
+      "scope": "global",
+      "priority": 100,
+      "is_active": true,
+      "business_id": "",
+      "description": "Default push decision rule - all alerts pass through",
+      "rule_content": {
+        "format": "decision_table",
+        "table": {
+          "kind": "DecisionTable",
+          "hitPolicy": "first",
+          "inputs": [
+            {"name": "level", "field": "level", "type": "string"}
+          ],
+          "outputs": [
+            {"name": "should_push", "field": "should_push", "type": "boolean"},
+            {"name": "action", "field": "action", "type": "string"},
+            {"name": "channel", "field": "channel", "type": "string"}
+          ],
+          "rules": [
+            {
+              "id": "rule_default",
+              "description": "Default fallback - send all",
+              "when": {},
+              "then": {"should_push": true, "action": "send", "channel": "im_normal"}
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
