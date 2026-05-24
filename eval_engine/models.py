@@ -59,7 +59,12 @@ class RuleConfig(models.Model):
 
 
 class RuleVersionHistory(models.Model):
-    rule_id = models.CharField(max_length=100, db_index=True)
+    rule = models.ForeignKey(
+        RuleConfig,
+        on_delete=models.CASCADE,
+        related_name='version_history',
+        help_text="Reference to the rule configuration"
+    )
     version = models.IntegerField()
     rule_content = models.JSONField(blank=True, null=True)
     changed_by = models.CharField(max_length=64)
@@ -67,9 +72,12 @@ class RuleVersionHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('rule_id', 'version')
+        unique_together = ('rule', 'version')
         indexes = [
-            models.Index(fields=['rule_id', 'created_at']),
+            models.Index(fields=['rule', 'created_at']),
         ]
         verbose_name = 'Rule Version History'
         verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return f"{self.rule.rule_id} v{self.version}"
