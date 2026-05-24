@@ -593,7 +593,7 @@ class ConfigurableRuleEngine:
             )
 
             RuleVersionHistory.objects.create(
-                rule_id=rule_id,
+                rule=rule,
                 version=1,
                 rule_content=rule.rule_content,
                 changed_by=created_by,
@@ -626,7 +626,7 @@ class ConfigurableRuleEngine:
             new_version = rule.version + 1
 
             RuleVersionHistory.objects.create(
-                rule_id=rule_id,
+                rule=rule,
                 version=new_version,
                 rule_content={
                     'conditions': rule_data.get('conditions', {}),
@@ -696,7 +696,7 @@ class ConfigurableRuleEngine:
         with transaction.atomic():
             new_version = rule.version + 1
             RuleVersionHistory.objects.create(
-                rule_id=rule_id,
+                rule=rule,
                 version=new_version,
                 rule_content=target_version.rule_content,
                 changed_by='system',
