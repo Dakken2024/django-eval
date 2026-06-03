@@ -1,0 +1,11 @@
+Django<=6.0,>=3.2
+djangorestframework>=3.11
+simpleeval>=0.9.13
+
+[redis]
+redis>=3.5
+django-redis>=5.4
+
+[test]
+pytest>=6.0
+pytest-django>=4.0

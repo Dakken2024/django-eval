@@ -1,3 +1,57 @@
+Metadata-Version: 2.4
+Name: django-eval
+Version: 0.1.0
+Summary: A Django reusable app providing a secure, configurable rule engine powered by SimpleEval
+Home-page: https://github.com/your-org/django-eval
+Author: Dakken Django Team
+License: MIT
+Project-URL: Source, https://github.com/your-org/django-eval
+Project-URL: Bug Reports, https://github.com/your-org/django-eval/issues
+Keywords: django simpleeval rule-engine decision-table expression-evaluator
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Django
+Classifier: Framework :: Django :: 3.2
+Classifier: Framework :: Django :: 4.0
+Classifier: Framework :: Django :: 4.1
+Classifier: Framework :: Django :: 4.2
+Classifier: Framework :: Django :: 5.2
+Classifier: Framework :: Django :: 6.0
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Description-Content-Type: text/x-rst
+License-File: LICENSE
+Requires-Dist: Django<=6.0,>=3.2
+Requires-Dist: djangorestframework>=3.11
+Requires-Dist: simpleeval>=0.9.13
+Provides-Extra: redis
+Requires-Dist: redis>=3.5; extra == "redis"
+Requires-Dist: django-redis>=5.4; extra == "redis"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0; extra == "test"
+Requires-Dist: pytest-django>=4.0; extra == "test"
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
 ==========
 django-eval
 ==========
@@ -533,388 +587,3 @@ License
 =======
 
 MIT License - see ``LICENSE`` file for details.
-Advanced Features
-=================
-
-Distributed Locks
------------------
-
-For multi-instance deployments, django-eval provides distributed locking to prevent concurrent rule modifications:
-
-.. code:: python
-
-    from eval_engine.distributed_locks import DistributedLock, RedisLockBackend
-    from django.core.cache import cache
-
-    # Initialize Redis backend
-    backend = RedisLockBackend(cache)
-
-    # Use lock context manager
-    with DistributedLock(backend, 'rule_update_123', timeout_ms=5000, ttl_ms=30000) as lock:
-        if lock.acquired:
-            # Safe to modify rule
-            update_rule(rule_id=123)
-        else:
-            # Another instance is handling this
-            log.info("Lock not acquired, skipping")
-
-**Supported backends:**
-
-- ``RedisLockBackend`` - Uses Redis SETNX with Lua scripts for atomic operations
-- ``ZookeeperLockBackend`` - Uses Zookeeper ephemeral sequential nodes (requires kazoo)
-
-Rule Workflows
---------------
-
-Orchestrate multiple rules in sequences, parallel executions, or conditional branches:
-
-.. code:: python
-
-    from eval_engine.workflow import RuleWorkflow, SequentialStep, ParallelStep, ConditionalStep
-    from eval_engine.configurable_rule_engine import ConfigurableRuleEngine
-
-    engine = ConfigurableRuleEngine()
-
-    # Create workflow
-    workflow = RuleWorkflow(name="loan_approval", timeout_ms=30000)
-
-    # Add sequential steps
-    workflow.add_step(SequentialStep("check_credit", rule_id=1))
-    workflow.add_step(SequentialStep("check_income", rule_id=2))
-
-    # Add parallel validation
-    workflow.add_step(ParallelStep(
-        "parallel_checks",
-        rule_ids=[3, 4, 5],
-        max_workers=4
-    ))
-
-    # Add conditional step
-    workflow.add_step(ConditionalStep(
-        "high_value_review",
-        rule_id=6,
-        condition=lambda ctx: ctx.get('loan_amount', 0) > 100000
-    ))
-
-    # Execute workflow
-    from eval_engine.workflow import WorkflowContext
-    context = WorkflowContext(
-        workflow_id="wf_001",
-        input_data={"loan_amount": 150000, "credit_score": 720}
-    )
-
-    result = workflow.execute(context, engine)
-    print(f"Success: {result.success}")
-    print(f"Steps executed: {result.steps_executed}")
-    print(f"Execution time: {result.execution_time_ms:.2f}ms")
-
-**Step types:**
-
-- ``SequentialStep`` - Execute single rule
-- ``ParallelStep`` - Execute multiple rules concurrently
-- ``ConditionalStep`` - Execute based on condition
-- ``LoopStep`` - Iterate over collection or repeat until condition
-- ``TransformStep`` - Transform data between steps
-- ``AggregatorStep`` - Combine results from multiple steps
-
-OpenTelemetry Integration
--------------------------
-
-Distributed tracing and metrics for rule evaluation:
-
-.. code:: python
-
-    from eval_engine.telemetry import RuleTracer, MetricsCollector
-
-    # Initialize tracer
-    tracer = RuleTracer(service_name="rule-engine", sampling_rate=0.1)
-
-    # Trace rule evaluation
-    with tracer.trace("evaluate_rule", attributes={"rule_id": 123}) as span:
-        result = engine.evaluate_rule(123, data)
-        span.set_attribute("result.matched", result.matched)
-
-    # Collect metrics
-    collector = MetricsCollector()
-    collector.increment("rule.evaluations.total", labels={"rule_id": "123"})
-    collector.record_histogram("rule.evaluation.duration_ms", 45.2)
-
-    # Export Prometheus format
-    prometheus_metrics = collector.export_prometheus()
-
-**Features:**
-
-- Automatic OpenTelemetry integration (falls back gracefully if not installed)
-- Span context propagation
-- Custom metric types: Counter, Gauge, Histogram, Summary
-- Prometheus text format export
-
-ML-Assisted Rule Tuning
------------------------
-
-Optimize rule performance with machine learning insights:
-
-.. code:: python
-
-    from eval_engine.ml_tuning import RuleOptimizer, AnomalyDetector, PerformanceAnalyzer
-
-    # Rule Optimizer - suggests improvements
-    optimizer = RuleOptimizer()
-    optimizer.add_evaluation(
-        rule_id=123,
-        duration_ms=45.2,
-        success=True,
-        cache_hit=False,
-        input_data={"amount": 1000}
-    )
-
-    result = optimizer.analyze_rule(123)
-    for rec in result.recommendations:
-        print(f"[{rec['priority']}] {rec['message']}")
-
-    # Anomaly Detector - find unusual patterns
-    detector = AnomalyDetector()
-    anomalies = detector.record_evaluation(
-        rule_id=123,
-        duration_ms=150.0,  # Unusually slow
-        success=True,
-        result={"action": "approve"}
-    )
-
-    for anomaly in anomalies:
-        print(f"{anomaly.severity}: {anomaly.description}")
-
-    # Performance Analyzer - detailed analysis
-    analyzer = PerformanceAnalyzer()
-    analyzer.add_profiling_data(
-        rule_id=123,
-        duration_ms=45.2,
-        cache_hit=False,
-        engine_type='simple',
-        expression_count=5
-    )
-
-    recommendations = analyzer.analyze(rule_id=123)
-    for recs in recommendations.values():
-        for rec in recs:
-            print(f"{rec.title}: {rec.action}")
-
-**Capabilities:**
-
-- Statistical analysis (Z-score, percentiles, moving averages)
-- Latency spike detection
-- Success rate anomaly detection
-- Result pattern change detection
-- Performance score calculation (0-100)
-- Actionable tuning recommendations
-
-Rule Import/Export
-------------------
-
-Export and import rules in JSON or YAML format:
-
-.. code:: python
-
-    from eval_engine.io import RuleExporter, RuleImporter
-
-    # Export rules
-    exporter = RuleExporter()
-    
-    # Single rule to JSON
-    json_str = exporter.export_rule_json(rule_id=123)
-    
-    # Multiple rules to YAML
-    yaml_str = exporter.export_rules_yaml([1, 2, 3], include_history=True)
-    
-    # Export to file
-    exporter.export_to_file('rules_backup.json', rule_ids=[1, 2, 3], format='json')
-
-    # Import rules
-    importer = RuleImporter()
-    
-    # From JSON string
-    imported = importer.import_from_json(json_str, mode='create')
-    
-    # From file with update mode
-    result = importer.import_from_file('rules_update.json', mode='update')
-    print(f"Created: {result.created}, Updated: {result.updated}")
-
-**Import modes:**
-
-- ``create`` - Create new rules only (skip existing)
-- ``update`` - Update existing rules (skip non-existing)
-- ``upsert`` - Create or update all rules
-
-Performance Profiling
----------------------
-
-Built-in performance profiling with P50/P90/P99 latency statistics:
-
-.. code:: python
-
-    from eval_engine.profiling import PerformanceProfiler
-
-    profiler = PerformanceProfiler()
-
-    # Profile evaluations
-    with profiler.profile('rule_123'):
-        result = engine.evaluate_rule(123, data)
-
-    # Get statistics
-    stats = profiler.get_rule_stats('rule_123')
-    print(f"P50: {stats.p50_ms:.2f}ms")
-    print(f"P90: {stats.p90_ms:.2f}ms")
-    print(f"P99: {stats.p99_ms:.2f}ms")
-    print(f"Total evaluations: {stats.total_evaluations}")
-
-    # Compare rules
-    comparison = profiler.compare_rules(['rule_1', 'rule_2', 'rule_3'])
-    print(f"Fastest: {comparison.fastest}")
-    print(f"Slowest: {comparison.slowest}")
-
-Testing Framework
------------------
-
-Comprehensive testing utilities for rule validation:
-
-.. code:: python
-
-    from eval_engine.test_framework import RuleTestRunner, RuleTestBuilder
-
-    # Fluent builder API
-    builder = RuleTestBuilder(engine)
-    
-    test_suite = (
-        builder.create_suite("Credit Check Tests")
-        .add_test(
-            name="High credit score approves",
-            rule_name="credit_check",
-            input_data={"credit_score": 750},
-            expected_output={"decision": "approve"}
-        )
-        .add_test(
-            name="Low credit score rejects",
-            rule_name="credit_check",
-            input_data={"credit_score": 500},
-            expected_output={"decision": "reject"}
-        )
-        .build()
-    )
-
-    # Run tests
-    runner = RuleTestRunner()
-    results = runner.run_suite(test_suite)
-    
-    print(f"Passed: {results.passed}/{results.total}")
-    for failure in results.failures:
-        print(f"FAILED: {failure.test_name} - {failure.message}")
-
-Settings
-========
-
-New settings for advanced features:
-
-.. code:: python
-
-    # Distributed locks
-    EVAL_ENGINE_LOCK_BACKEND = 'redis'  # 'redis' | 'zookeeper'
-    EVAL_ENGINE_LOCK_TIMEOUT_MS = 5000
-    EVAL_ENGINE_LOCK_TTL_MS = 30000
-
-    # Telemetry
-    EVAL_ENGINE_TRACING_ENABLED = True
-    EVAL_ENGINE_TRACING_SERVICE_NAME = 'django-eval'
-    EVAL_ENGINE_TRACING_SAMPLING_RATE = 0.1  # 10% sampling
-    EVAL_ENGINE_METRICS_ENABLED = True
-
-    # ML tuning
-    EVAL_ENGINE_ANOMALY_DETECTION_ENABLED = True
-    EVAL_ENGINE_ANOMALY_Z_THRESHOLD = 3.0
-    EVAL_ENGINE_OPTIMIZER_MIN_SAMPLES = 30
-
-Architecture
-============
-
-Module Structure
-----------------
-
-::
-
-    eval_engine/
-    ├── distributed_locks/     # Distributed locking (Redis/Zookeeper)
-    │   ├── __init__.py
-    │   ├── lock_backend.py    # Abstract base classes
-    │   ├── redis_backend.py   # Redis implementation
-    │   └── zookeeper_backend.py  # Zookeeper implementation
-    ├── workflow/              # Rule workflow engine
-    │   ├── __init__.py
-    │   ├── workflow_engine.py # Core workflow classes
-    │   └── step_types.py      # Step implementations
-    ├── telemetry/             # Observability
-    │   ├── __init__.py
-    │   ├── tracer.py          # OpenTelemetry integration
-    │   └── metrics.py         # Metrics collection
-    ├── ml_tuning/             # ML-assisted optimization
-    │   ├── __init__.py
-    │   ├── rule_optimizer.py  # Performance optimization
-    │   ├── anomaly_detector.py # Anomaly detection
-    │   └── performance_analyzer.py # Analysis & recommendations
-    ├── io/                    # Import/export
-    │   ├── __init__.py
-    │   └── rule_io.py         # JSON/YAML IO
-    ├── profiling/             # Performance profiling
-    │   └── performance_profiler.py
-    ├── test_framework/        # Testing utilities
-    │   ├── test_runner.py
-    │   └── test_builder.py
-    └── validators/            # Security validation
-        ├── expression_validator.py
-        └── function_registry.py
-
-Dependencies
-============
-
-Required:
-
-- Django >= 3.2
-- djangorestframework >= 3.11
-- simpleeval >= 0.9.13
-
-Optional:
-
-- ``redis`` + ``django-redis`` - For Redis cache and distributed locks
-- ``kazoo`` - For Zookeeper distributed locks
-- ``opentelemetry-api`` + ``opentelemetry-sdk`` - For OpenTelemetry tracing
-- ``pyyaml`` - For YAML import/export
-
-Troubleshooting
-===============
-
-Common Issues
--------------
-
-**Lock acquisition timeout**
-
-If locks frequently timeout, increase ``EVAL_ENGINE_LOCK_TIMEOUT_MS`` or investigate contention.
-
-**High memory usage with metrics**
-
-Reduce metrics retention or disable specific metric types via settings.
-
-**Anomaly detector false positives**
-
-Increase ``EVAL_ENGINE_ANOMALY_Z_THRESHOLD`` or increase ``window_size`` for smoother baselines.
-
-**Workflow execution slow**
-
-Use ``ParallelStep`` for independent rules and tune ``max_workers``.
-
-Contributing
-============
-
-We welcome contributions! Please see our contributing guidelines for details.
-
-License
-=======
-
-MIT License - see LICENSE file for details.
