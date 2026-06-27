@@ -4,22 +4,26 @@
 [![Django 3.2+](https://img.shields.io/badge/django-3.2%7C4.0%7C4.1%7C4.2-green.svg)](https://www.djangoproject.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Django reusable app providing a **secure, configurable rule engine** powered by [SimpleEval](https://github.com/danthedeckie/simpleeval).
+A Django reusable app providing a **secure, configurable hybrid rule engine** supporting both [SimpleEval](https://github.com/danthedeckie/simpleeval) and [Zen Engine](https://github.com/gorules/zen).
 
-It enables you to define, manage, and execute business rules using **decision tables** and **expression-based conditions** with built-in security validation, version management, precompilation for high performance, and pluggable cache backends.
+It enables you to define, manage, and execute business rules using **decision tables**, **expression-based conditions**, or **Zen Engine rules** with built-in security validation, version management, precompilation for high performance, pluggable cache backends, and seamless multi-engine orchestration.
 
 ---
 
 ## Table of Contents
 
 - [Features](#features)
+- [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [Usage](#usage)
   - [Evaluating a Rule](#evaluating-a-rule)
   - [Using the Precompiled Engine](#using-the-precompiled-engine)
+  - [Zen Engine Integration](#zen-engine-integration)
+  - [Hybrid Registry & Shadow Mode](#hybrid-registry--shadow-mode)
   - [Defining Decision Table Rules](#defining-decision-table-rules)
   - [Expression Format](#expression-format)
+  - [Rule Workflow](#rule-workflow)
   - [Rule Management API](#rule-management-api)
   - [Testing Rules](#testing-rules)
   - [Django Admin](#django-admin)
@@ -33,18 +37,109 @@ It enables you to define, manage, and execute business rules using **decision ta
 
 ## Features
 
+### Core Engines
 - **Decision Table Engine** - First-hit policy decision tables with `when/then` rules
 - **SimpleEval Expression Engine** - Safe Python expression evaluation with security filtering
+- **Zen Engine Adapter** - High-performance rules via [Zen Engine](https://github.com/gorules/zen) (gRPC/HTTP)
+- **Hybrid Registry** - Unified multi-engine orchestration with automatic routing
+
+### Performance & Reliability
 - **Precompiled Rule Engine** - Compile rules into optimized Python callables for high-throughput scenarios
 - **Pluggable Cache Backends** - Support Django Cache, Redis, In-Memory, or Dummy (no-op) backends
 - **Hot Reload** - `RegistryWatcher` automatically detects rule changes via version tracking
+- **Distributed Locks** - Redis/Zookeeper-backed locks for multi-instance deployments
+
+### Advanced Features
+- **Rule Workflow Engine** - Sequential, parallel, conditional, and loop-based rule orchestration
+- **Shadow Mode** - Dual-engine execution for safe migration and result comparison
+- **Auto Conversion** - Transform decision tables to Zen Engine format with safety checks
+- **ML Tuning Assistant** - Performance analysis and anomaly detection for rule optimization
+
+### Management & Operations
 - **Version Management** - Full rule version history with publish/rollback support
 - **Built-in Functions** - Time-based helpers, severity scoring, math utilities
 - **Test Framework** - Built-in rule testing and test suite execution
-- **Django Admin Integration** - Full CRUD management via Django Admin with custom templates
+- **Import/Export** - JSON/YAML rule serialization for backup and migration
+- **Telemetry** - OpenTelemetry integration with Prometheus metrics export
+- **Django Admin Integration** - Full CRUD management via Django Admin with visual editor
 - **REST API** - Complete REST API for rule CRUD, evaluation, testing, and validation
+
+### Security & Configuration
 - **Security** - Expression validator blocks dangerous patterns (`__import__`, `eval`, `os`, etc.)
 - **Configurable Settings** - All behavior customizable via `EVAL_ENGINE_*` Django settings
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client["Client Layer"]
+        API[REST API]
+        Admin[Django Admin]
+        Direct[Direct Python API]
+    end
+
+    subgraph Core["Core Layer"]
+        Registry[HybridRuleRegistry]
+        Cache[Cache System]
+        Watcher[RegistryWatcher]
+    end
+
+    subgraph Engines["Engine Layer"]
+        SimpleEval[SimpleEval Engine]
+        DecisionTable[Decision Table Engine]
+        Compiled[Precompiled Engine]
+        ZenAdapter[Zen Engine Adapter]
+    end
+
+    subgraph External["External Services"]
+        ZenEngine[(Zen Engine gRPC/HTTP)]
+        Redis[Redis/Zookeeper]
+        Prometheus[Prometheus/Metrics]
+    end
+
+    API --> Registry
+    Admin --> Registry
+    Direct --> Registry
+    
+    Registry --> SimpleEval
+    Registry --> DecisionTable
+    Registry --> Compiled
+    Registry --> ZenAdapter
+    
+    ZenAdapter -->|gRPC/HTTP| ZenEngine
+    Registry --> Cache
+    Cache --> Redis
+    Registry --> Watcher
+    
+    SimpleEval --> Prometheus
+    ZenAdapter --> Prometheus
+```
+
+### Engine Selection Flow
+
+```mermaid
+flowchart LR
+    Request[Rule Request] --> Router{Engine Type?}
+    Router -->|simple_eval| SimpleEval[SimpleEval Engine]
+    Router -->|decision_table| DT[Decision Table Engine]
+    Router -->|precompiled| Compiled[Precompiled Engine]
+    Router -->|zen_engine| Zen[Zen Engine Adapter]
+    
+    Zen --> gRPC[gRPC Channel Pool]
+    gRPC --> ZenServer[Zen Engine Server]
+    
+    SimpleEval --> Result[Result]
+    DT --> Result
+    Compiled --> Result
+    ZenServer --> Result
+    
+    Result --> Shadow{Shadow Mode?}
+    Shadow -->|Yes| Compare[Compare Results]
+    Shadow -->|No| Return[Return to Client]
+    Compare --> Return
+```
 
 ---
 
@@ -183,6 +278,154 @@ For high-throughput scenarios, use the precompiled engine:
 from eval_engine.compiled_rule_engine import RuleRegistry
 
 registry = RuleRegistry()
+```
+
+### Zen Engine Integration
+
+**Install Zen Engine dependencies:**
+
+```bash
+pip install django-eval[zen]
+# Or manually:
+pip install grpcio grpc-tools
+```
+
+**Configure Zen Engine connection in `settings.py`:**
+
+```python
+EVAL_ENGINE_ZEN_CONFIG = {
+    'enabled': True,
+    'grpc_endpoint': 'localhost:50051',  # Zen Engine gRPC address
+    'http_endpoint': 'http://localhost:8080',  # Fallback HTTP endpoint
+    'timeout_ms': 1000,
+    'max_retries': 3,
+}
+```
+
+**Create a Zen Engine rule:**
+
+```python
+from eval_engine.models import Rule
+
+rule = Rule.objects.create(
+    name='vip_discount_check',
+    code='vip_discount',
+    engine_type='zen_engine',  # Specify Zen Engine
+    zen_definition={
+        'rules': [
+            {
+                'name': 'VIP Gold Discount',
+                'condition': {'all': [
+                    {'fact': 'user', 'operator': '==', 'value': 'gold'},
+                    {'fact': 'amount', 'operator': '>=', 'value': 100}
+                ]},
+                'action': {'discount': 0.2}
+            }
+        ]
+    },
+    is_active=True
+)
+```
+
+**Evaluate with Zen Engine:**
+
+```python
+from eval_engine.adapters import ZenEngineAdapter
+
+adapter = ZenEngineAdapter()
+result = adapter.evaluate('vip_discount_check', {
+    'user': 'gold',
+    'amount': 150
+})
+
+print(result.matched)   # True
+print(result.action)    # {'discount': 0.2}
+```
+
+### Hybrid Registry & Shadow Mode
+
+**Use the unified registry for multi-engine support:**
+
+```python
+from eval_engine.registry import HybridRuleRegistry
+
+registry = HybridRuleRegistry()
+
+# Automatic engine routing based on rule's engine_type
+result = registry.evaluate('vip_discount_check', {
+    'user': 'gold',
+    'amount': 150
+})
+```
+
+**Enable Shadow Mode for safe migration:**
+
+```python
+# Compare SimpleEval and Zen Engine results
+result = registry.evaluate(
+    'vip_discount_check',
+    {'user': 'gold', 'amount': 150},
+    shadow_mode=True  # Runs both engines and compares
+)
+
+print.result.shadow_result)       # Result from second engine
+print(result.shadow_match)        # True if both engines agree
+print(result.performance_delta)   # Latency difference in ms
+```
+
+**Convert Decision Table to Zen format:**
+
+```python
+from eval_engine.converters import DecisionTableToZen
+
+converter = DecisionTableToZen()
+zen_json = converter.convert(rule)
+
+# Check for conversion warnings (e.g., short-circuit logic)
+if converter.warnings:
+    print("Conversion warnings:", converter.warnings)
+```
+
+### Rule Workflow
+
+For complex business processes, use the workflow engine to orchestrate multiple rules:
+
+```python
+from eval_engine.workflow import RuleWorkflow, SequentialStep, ParallelStep, ConditionalStep
+
+# Define a workflow
+workflow = RuleWorkflow(name='order_processing')
+
+# Sequential steps: Run rules in order
+workflow.add_step(SequentialStep(
+    name='validation',
+    rule_codes=['fraud_check', 'inventory_check']
+))
+
+# Parallel steps: Run rules concurrently
+workflow.add_step(ParallelStep(
+    name='risk_assessment',
+    rule_codes=['credit_risk', 'shipping_risk', 'user_risk']
+))
+
+# Conditional step: Branch based on previous results
+workflow.add_step(ConditionalStep(
+    name='approval_branch',
+    condition=lambda ctx: ctx.get('total_amount', 0) > 1000,
+    true_steps=[SequentialStep(rule_codes=['manager_approval'])],
+    false_steps=[SequentialStep(rule_codes=['auto_approve'])]
+))
+
+# Execute workflow
+result = workflow.execute(context={'order_id': '12345', 'total_amount': 1500})
+print(result.outputs)  # Aggregated results from all steps
+```
+
+### Using the Precompiled Engine (continued)
+
+For high-throughput scenarios, use the precompiled engine:
+
+```python
 registry.load_from_db()
 
 # Evaluate all active push_decision rules
@@ -574,6 +817,50 @@ EVAL_ENGINE_FORBIDDEN_PATTERNS = [
     r'import\s+',
     # Add your own patterns
 ]
+```
+
+### Production Deployment Tips
+
+**1. gRPC Connection Pooling (Zen Engine)**
+
+```python
+# Use persistent channels for high throughput
+EVAL_ENGINE_ZEN_CONFIG = {
+    'grpc_endpoint': 'zen-engine.prod:50051',
+    'max_channel_pools': 10,
+    'channel_recycle_timeout': 300,  # seconds
+}
+```
+
+**2. Distributed Locks for Multi-Instance Deployments**
+
+```python
+# settings.py
+EVAL_ENGINE_LOCK_BACKEND = 'redis'  # or 'zookeeper'
+EVAL_ENGINE_REDIS_URL = 'redis://redis-cluster:6379/0'
+```
+
+**3. Telemetry & Monitoring**
+
+```python
+# Enable OpenTelemetry tracing
+EVAL_ENGINE_TELEMETRY_ENABLED = True
+EVAL_ENGINE_OTEL_EXPORTER = 'prometheus'  # or 'jaeger', 'zipkin'
+
+# Access metrics
+from eval_engine.telemetry import MetricsCollector
+metrics = MetricsCollector()
+print(metrics.get_latency_histogram('my_rule'))
+```
+
+**4. Performance Profiling**
+
+```python
+from eval_engine.profiling import PerformanceProfiler
+
+profiler = PerformanceProfiler()
+stats = profiler.get_rule_stats('my_rule')
+print(f"P50: {stats.p50_ms}ms, P99: {stats.p99_ms}ms")
 ```
 
 ---
